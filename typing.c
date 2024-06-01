@@ -13,7 +13,6 @@
 #define SHORTS_LOOP 5
 #define LONGS_COUNT 5
 
-// https://anythink.tistory.com/entry/Linux-리눅스에서-getch-사용
 int getch() {
     int c;
     struct termios old;
@@ -32,20 +31,86 @@ int getch() {
     return c;
 }
 
+static inline int calculateAccuracy(int correct, int total) {
+    if (correct == 0) return 0;
+    return (double)correct / total * 100;
+}
+
+static inline int calculateCpm(int correct, time_t start) {
+    if (time(NULL) - start < 1) return 0;
+    return correct /  ((double)(time(NULL) - start) / 60);
+}
+
+static inline void updateLetterTexts(int progress, int wrong, int accuracy, char target) {
+    system("clear");
+    printf(">> 영문 타자 연습 프로그램: 자리 연습 <<\n");
+    printf("진행도: %d%%\t 오타수: %d\t 정확도: %d%%\n\n", progress, wrong, accuracy);
+    printf("%c", target);
+}
+
+static inline void updateWordTexts(int progress, int wrong, int accuracy, char word[]) {
+    system("clear");
+    printf(">> 영문 타자 연습 프로그램 : 낱말 연습 <<\n");
+    printf("진행도 : %d%%\t오타수 : %d\t정확도 : %d%%\n\n", progress, wrong, accuracy);
+    printf("%s\n", word);
+}
+
+static inline void updateShortTexts(int progress, int cpm, int maxCpm, int accuracy, char target[], char input[]) {
+    system("clear");
+    printf(">> 영문 타자 연습 프로그램: 짧은 글 연습 <<\n");
+    printf("진행도 : %d%%\t현재타수 : %d\t최고타수 : %d\t정확도 : %d%%\n\n", progress, cpm, maxCpm, accuracy);
+    printf("%s\n", target);
+    printf("%s", input);
+}
+
+static inline void updateLongTexts(int accuracy, int cpm, int line, char targetText[5][100], char input[5][100]) {
+    system("clear");
+    printf(">> 영문 타자 연습 프로그램: 긴 글 연습 <<\n");
+    printf("정확도 : %d%%\t현재타수 : %d\n\n", accuracy, cpm);
+
+    // 제시문 5행 출력
+    if (line < 5) {
+        for (int i = 0; i < 5; i++)
+            printf("%s\n", targetText[i]);
+    } else if (line < 10) {
+        for (int i = 5; i < 10; i++)
+            printf("%s\n", targetText[i]);
+    }
+
+    // 사용자 입력을 출력
+    for (int i = 0; i <= line%5; i++) // line%5 => 0~4, 5~9를 한번에 표현
+        printf("\n%s", input[i]);
+}
+
 void letterTyping() {
-    int progress, try, typo, accuracy;
+    int progress = 0, correct = 0, wrong = 0, accuracy = 0;
+    char type;
     for (int i = 1; i <= 20; i++) {
         char target = rand() % 52;
-        if (target <= 25)
-            target += 'a';
-        else
-            target += 'A' - 26;
+        if (target <= 25) target += 'a';
+        else target += 'A' - 26;
 
-        system("clear");
-        printf(">> 영문 타자 연습 프로그램: 자리 연습 <<\n");
-        // printf("진행도 : %d%%\t현재타수 : %d\t최고타수 : %d\t정확도 : %d%%\n\n", progress, cpm, maxCpm, accuracy);
-        printf("%c", target);
+        while (1) {
+            accuracy = calculateAccuracy(correct, correct+wrong);
+            updateLetterTexts(progress, wrong, accuracy, target);
+
+            type = getch();
+            if (type == 27) {
+                system("clear");
+                return;
+            } else if (type == target) {
+                correct++;
+                break;
+            } else wrong++;
+        }
+        progress += 5;
     }
+    system("clear");
+	printf("자리 연습을 완료하였습니다.\n");
+    sleep(2);
+    printf("ENTER키를 누르면 메뉴로 돌아갑니다: ");
+    getchar();
+    return;
 }
 
 void wordTyping() {
@@ -69,19 +134,12 @@ void wordTyping() {
         progress = (double)i / WORDS_LOOP * 100;
         accuracy = (correct + wrong) > 0 ? (double)correct / (correct + wrong) * 100 : 100;
 
-        system("clear");
-        printf(">> 영문 타자 연습 프로그램 : 낱말 연습 <<\n");
-        printf("진행도 : %d%%\t오타수 : %d\t정확도 : %d%%\n\n", progress, wrong, accuracy);
-        printf("%s\n", word);
-        printf("_ ");
+        updateWordTexts(progress, wrong, accuracy, word);
         scanf("%s", input);
 
-        if (strcmp(input, "###") == 0)
-            return;
-        else if (strcmp(word, input) == 0)
-            correct++;
-        else
-            wrong++;
+        if (strcmp(input, "###") == 0) return;
+        else if (strcmp(word, input) == 0) correct++;
+        else wrong++;
 
         getchar();  // 이전의 개행 문자를 읽기 위해
     }
@@ -89,7 +147,8 @@ void wordTyping() {
     progress = 100;
     accuracy = (correct + wrong) > 0 ? (double)correct / (correct + wrong) * 100 : 100;
 
-    printf("\n\n\n\n\n>> 영문 타자 연습 프로그램 : 낱말 연습 <<\n");
+    system("clear");
+    printf(">> 영문 타자 연습 프로그램 : 낱말 연습 <<\n");
     printf("진행도 : %d%%\t오타수 : %d\t정확도 : %d%%\n\n", progress, wrong, accuracy);
 
     sleep(2);
@@ -142,41 +201,35 @@ void shortTyping() {
         start = time(NULL);
 
         for (int p = 0; ;) {
-            system("clear");
-            printf(">> 영문 타자 연습 프로그램: 짧은 글 연습 <<\n");
-            printf("진행도 : %d%%\t현재타수 : %d\t최고타수 : %d\t정확도 : %d%%\n\n", progress, cpm, maxCpm, accuracy);
-            printf("%s\n", target);
-            printf("%s", input);
-
+            updateShortTexts(progress, cpm, maxCpm, accuracy, target, input);
             c = getch();
             if (c == '~') return;   // 5번의 문장을 입력하기 전에 메뉴로 복귀할 수 있는 기능
             else if (c == 10) {        // 엔터
-                if (p <= 0) continue;  // 문장을 입력한 후 눌렀을 경우만 실행.
+                if (p < 1) continue;  // 문장을 입력한 후 눌렀을 경우만 실행.
                 // 엔터키를 누르면 문장을 처리 한다.
-                /* while (shortsArr[target][p++] != '\0') correct--, total++;
+                while (target[p++] != '\0') correct--, total++;
                 if (correct < 0) correct = 0;
-                accuracy = (double)correct / total * 100; */
+                accuracy = calculateAccuracy(correct, total);
                 break;
             } else if (c == 8 || c == 127) {  // 백스페이스
-                if (p <= 0) continue; // 입력한 문자 없을 때 건너뛰기
+                if (p < 1) continue; // 입력한 문자 없을 때 건너뛰기
                 p--, total--;
-                if (input[p] == target[p]) correct--;
+                if (input[p] == target[p]) correct--; // 전에 입력했던 게 맞았었을 경우
                 input[p] = '\0';  // 문자열 끝 표기하기
-                printf("\b \b");  // 화면에서 지우기
             } else {
                 input[p] = c, input[p+1] = '\0';
                 if (c == target[p]) correct++;
                 total++, p++;
             }
-
-            accuracy = (double)correct / total * 100;
-            cpm = correct / ((double)(time(NULL) - start) / 60);
+            accuracy = calculateAccuracy(correct, total);
+            cpm = calculateCpm(correct, start);
+            if (maxCpm < cpm) maxCpm = cpm;
         }
-        if (maxCpm < cpm) maxCpm = cpm;
         progress = (double)i / SHORTS_LOOP * 100;
     }
 
-    printf("\n\n\n\n\n>> 짧은 글 연습 결과 <<\n");
+    system("clear");
+    printf(">> 짧은 글 연습 결과 <<\n");
     printf("진행도 : %d%%\t최고타수 : %d\n\n", progress, maxCpm);
 
     sleep(2);
@@ -235,27 +288,19 @@ void longTyping() {
 
     input[0][0] = '\0';
     target = rand() % 4;
+    /* int longsLength[4], sum;
+    for (int i = 0; i < 4; i++) {
+        sum = 0;
+        for (int j = 0; j < 10; j++)
+            sum += strlen(longsArr[i][j]);
+        longsLength[i] = sum;
+    } */
     start = time(NULL);
 
     for (int p = 0; ;) {
         if (line >= 10) break; // 10개의 행 모두 입력해서 끝났을 때
-        system("clear");
-        printf(">> 영문 타자 연습 프로그램: 긴 글 연습 <<\n");
-        printf("정확도 : %d%%\t현재타수 : %d\n\n", accuracy, cpm);
-
-        // 제시문 5행 출력
-        if (line < 5) {
-            for (int i = 0; i < 5; i++)
-                printf("%s\n", longsArr[target][i]);
-        } else if (line < 10) {
-            for (int i = 5; i < 10; i++)
-                printf("%s\n", longsArr[target][i]);
-        }
-
-        // 사용자 입력을 출력
-        for (int i = 0; i <= line%5; i++) // line%5 => 0~4, 5~9를 한번에 표현
-            printf("\n%s", input[i]);
-
+       
+        updateLongTexts(accuracy, cpm, line, longsArr[target], input);
         c = getch();
         if (c == '~') return;       // 모두 입력하기 전에 메뉴로 복귀할 수 있는 기능
         else if (c == 10) {        // 엔터
@@ -276,12 +321,12 @@ void longTyping() {
             if (c == longsArr[target][line][p]) correct++;
             total++, p++;
         }
-
-        accuracy = (double)correct / total * 100;
-        cpm = correct / ((double)(time(NULL) - start) / 60);
+        accuracy = calculateAccuracy(correct, total);
+        cpm = calculateCpm(correct, start);
     }
 
-    printf("\n\n\n\n\n>> 긴 글 연습 결과 <<\n");
+    system("clear");
+    printf(">> 긴 글 연습 결과 <<\n");
     printf("정확도 : %d%%\t걸린 시간 : %ld초\n\n", accuracy, time(NULL)-start);
 
     sleep(2);
