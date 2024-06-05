@@ -218,7 +218,7 @@ void shortTyping() {
             else if (c == 10) {        // 엔터
                 if (p < 1) continue;  // 문장을 입력한 후 눌렀을 경우만 실행.
                 // 엔터키를 누르면 문장을 처리 한다.
-                while (target[p++] != '\0') correct--, total++;
+                while (target[p++] != '\0') total++;
                 if (correct < 0) correct = 0;
                 accuracy = calculateAccuracy(correct, total);
                 break; // for문 나가기
@@ -317,7 +317,7 @@ void longTyping() {
         if (c == '~') return;       // 모두 입력하기 전에 메뉴로 복귀할 수 있는 기능
         else if (c == 10) {        // 엔터
             // 문장에 남은 글자가 있는데 엔터를 눌렀을 때 남은 글자 처리
-            while (longsArr[target][line][p++] != '\0') correct--, total++;
+            while (longsArr[target][line][p++] != '\0') total++;
             if (correct < 0) correct = 0;
             accuracy = calculateAccuracy(correct, total);
             p = 0, line++;
